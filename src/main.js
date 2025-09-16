@@ -61,13 +61,10 @@ scene.add(mainlight, backlight, secondlight)
 const gltfLoader = new GLTFLoader()
 let model = null
 
-gltfLoader.load(
-  'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c71f738962ad220817ceb3_dummy.glb.txt',
-  (gltf) => {
-    model = gltf.scene
-    scene.add(model)
-  }
-)
+gltfLoader.load('/models/dummy-gltf.glb', (gltf) => {
+  model = gltf.scene
+  scene.add(model)
+})
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
