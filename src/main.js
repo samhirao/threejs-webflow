@@ -6,7 +6,7 @@ import createBadge from './features/createBasge'
 import './styles/style.css'
 
 // Features
-// createBadge() // Commented out to remove "It works!" badge
+createBadge()
 animateTitle()
 
 // Debug logging for mobile
@@ -61,14 +61,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 )
-
-// Set camera position based on device
-if (isMobile()) {
-  camera.position.z = 2.5 // Much closer on mobile
-} else {
-  camera.position.z = 4 // Normal distance on desktop
-}
-
+camera.position.z = 4
 scene.add(camera)
 
 // Lights
@@ -97,9 +90,6 @@ gltfLoader.load(
     modelLoaded = true
     scene.add(model)
 
-    // Remove placeholder when model loads
-    scene.remove(placeholderMesh)
-
     // If there are animations in the glb
     if (gltf.animations && gltf.animations.length > 0) {
       mixer = new THREE.AnimationMixer(model)
@@ -118,7 +108,6 @@ gltfLoader.load(
   },
   (error) => {
     console.error('GLB loading error:', error)
-    // Keep placeholder if model fails to load
   }
 )
 
@@ -193,25 +182,11 @@ function startRendering() {
   }
 }
 
-// Initialize ASCII effect immediately
+// Initialize ASCII effect
 createAsciiEffect()
 
 // Hide original canvas
 canvas.style.display = 'none'
-
-// Add a placeholder/loading geometry to show ASCII immediately
-const placeholderGeometry = new THREE.SphereGeometry(0.5, 16, 16)
-const placeholderMaterial = new THREE.MeshBasicMaterial({
-  color: 0x333333,
-  wireframe: true,
-  transparent: true,
-  opacity: 0.3
-})
-const placeholderMesh = new THREE.Mesh(placeholderGeometry, placeholderMaterial)
-scene.add(placeholderMesh)
-
-// Animate placeholder while loading
-let placeholderRotation = 0
 
 // Cursor & Scroll
 const cursor = { x: 0, y: 0 }
@@ -241,15 +216,13 @@ function updateModelScale() {
   const baseScale = Math.max(asciiContainer.offsetWidth, 300) / referenceSize
 
   if (isMobile()) {
-    // On mobile, make the model MUCH bigger (5x) and adjust camera
-    const mobileScale = baseScale * 5
+    // On mobile, make the model much bigger (3x) to compensate for smaller screen
+    const mobileScale = baseScale * 3
     model.scale.set(mobileScale, mobileScale, mobileScale)
-    camera.position.z = 2.5
     console.log('Applied mobile model scale:', mobileScale)
   } else {
     // Desktop: normal scaling
     model.scale.set(baseScale, baseScale, baseScale)
-    camera.position.z = 4
     console.log('Applied desktop model scale:', baseScale)
   }
 }
@@ -267,13 +240,6 @@ function resize() {
 
   camera.aspect = sizes.width / sizes.height
   camera.updateProjectionMatrix()
-
-  // Update camera position based on current device type
-  if (isNowMobile) {
-    camera.position.z = 2.5
-  } else {
-    camera.position.z = 4
-  }
 
   renderer.setSize(sizes.width, sizes.height)
 
@@ -313,13 +279,6 @@ function animate() {
   // Update mixer (for GLB animations)
   if (mixer) {
     mixer.update(delta)
-  }
-
-  // Animate placeholder while loading
-  if (!modelLoaded && placeholderMesh) {
-    placeholderRotation += 0.01
-    placeholderMesh.rotation.y = placeholderRotation
-    placeholderMesh.rotation.x = placeholderRotation * 0.5
   }
 
   if (model && modelLoaded) {
