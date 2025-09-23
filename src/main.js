@@ -1,12 +1,13 @@
 import * as THREE from 'three'
 import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+
 import animateTitle from './features/animateTitle'
-// import createBadge from './features/createBasge' // Removed badge import
+import createBadge from './features/createBasge'
 import './styles/style.css'
 
 // Features
-// createBadge() // Commented out to remove "It works!" badge
+createBadge()
 animateTitle()
 
 // Debug logging for mobile
@@ -230,13 +231,8 @@ window.addEventListener('touchmove', (event) => {
 })
 
 let scrollY = 0
-let baseScrollScale = 1
 window.addEventListener('scroll', () => {
-  scrollY = window.scrollY
-  // Calculate scroll-based scale (desktop only)
-  if (!isMobile()) {
-    baseScrollScale = 1 + (scrollY * 0.001) // Scale increases as you scroll down
-  }
+  scrollY = window.scrollY * 0.003
 })
 
 // ===== Responsive model scaling =====
@@ -246,17 +242,16 @@ function updateModelScale() {
   const baseScale = Math.max(asciiContainer.offsetWidth, 300) / referenceSize
 
   if (isMobile()) {
-    // On mobile, make the model MUCH bigger (5x) and no scroll scaling
+    // On mobile, make the model MUCH bigger (5x) and adjust camera
     const mobileScale = baseScale * 5
     model.scale.set(mobileScale, mobileScale, mobileScale)
     camera.position.z = 2.5
     console.log('Applied mobile model scale:', mobileScale)
   } else {
-    // Desktop: normal scaling + scroll-based scaling
-    const desktopScale = baseScale * baseScrollScale
-    model.scale.set(desktopScale, desktopScale, desktopScale)
+    // Desktop: normal scaling
+    model.scale.set(baseScale, baseScale, baseScale)
     camera.position.z = 4
-    console.log('Applied desktop model scale:', desktopScale, 'scroll scale:', baseScrollScale)
+    console.log('Applied desktop model scale:', baseScale)
   }
 }
 
@@ -337,11 +332,7 @@ function animate() {
     model.rotation.x = cursorYOffset
     model.position.y = -0.1 // move it slightly down
     model.position.x = -0.1 // move it to the left
-
-    // Update scale based on scroll (desktop only)
-    if (!isMobile()) {
-      updateModelScale() // This will apply the scroll-based scaling
-    }
+    model.position.z += (scrollY - model.position.z) * 0.5
   }
 
   if (effect) {
