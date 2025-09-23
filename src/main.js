@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import animateTitle from './features/animateTitle'
+
 // import createBadge from './features/createBasge' // Removed badge import
 import './styles/style.css'
 
@@ -340,7 +341,7 @@ function animate() {
     model.rotation.y = cursorXOffset
     model.rotation.x = cursorYOffset
     model.position.y = -0.1 // move it slightly down
-    model.position.x = -0.1 // move it to the left
+    model.position.x = -10 // move it to the left
 
     // Smooth scroll animation (all devices)
     model.position.z += (scrollY - model.position.z) * 0.5
