@@ -57,7 +57,7 @@ function initializeApp() {
 
     // camera
     const camera = new THREE.PerspectiveCamera(25, sizes.width / sizes.height, 0.1, 1000)
-    camera.position.set = 4
+    camera.position.z = 4
     scene.add(camera)
 
     // lights - simplified for mobile performance
@@ -198,8 +198,8 @@ function initializeApp() {
     let isInteracting = false
 
     function updateCursor(x, y) {
-      cursor.x = (x / sizes.width - 0.5) * 0
-      cursor.y = (y / sizes.height - 0.5) * 0
+      cursor.x = (x / sizes.width - 0.5) * 2
+      cursor.y = (y / sizes.height - 0.5) * 2
     }
 
     // mouse events
