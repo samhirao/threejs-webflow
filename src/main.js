@@ -332,10 +332,8 @@ function animate() {
     model.position.y = -0.1 // move it slightly down
     model.position.x = -0.1 // move it to the left
 
-    // Smooth scroll animation (desktop only)
-    if (!isMobile()) {
-      model.position.z += (scrollY - model.position.z) * 0.5
-    }
+    // Smooth scroll animation (all devices)
+    model.position.z += (scrollY - model.position.z) * 0.5
   }
 
   if (effect) {
