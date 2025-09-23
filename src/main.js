@@ -6,7 +6,6 @@ import createBadge from './features/createBasge'
 import './styles/style.css'
 
 // Features
-createBadge()
 animateTitle()
 
 // Debug logging for mobile
