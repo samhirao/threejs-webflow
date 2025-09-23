@@ -93,7 +93,7 @@ function initializeApp() {
     console.log('loading model...')
 
     loader.load(
-      'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9af3eb83f278f07e827ab_shield-three.glb.txt',
+      'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9b3f0ed751939a196b255_shield-orbit.glb.txt',
       (gltf) => {
         console.log('model loaded')
         model = gltf.scene
@@ -294,11 +294,15 @@ function initializeApp() {
         placeholderMesh.rotation.x = placeholderRotation * 0.3
       }
 
-      // model interaction
+      // model interaction + scroll zoom
       if (model && modelLoaded) {
         model.rotation.y = cursor.x * 0.25
         model.rotation.x = cursor.y * 0.08
-        model.position.set(-0.1, -0.1, model.position.z + (scrollY - model.position.z) * 0.4)
+        model.position.set(-0.1, -0.1, 0) // keep model at origin
+
+        // camera moves closer as you scroll down
+        const baseZ = 4
+        camera.position.z = baseZ - scrollY // subtract scrollY to move closer
       }
 
       // render
