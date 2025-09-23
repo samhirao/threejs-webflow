@@ -9,6 +9,10 @@ import './styles/style.css'
 createBadge()
 animateTitle()
 
+// Debug logging for mobile
+console.log('Script loaded, window width:', window.innerWidth)
+console.log('User agent:', navigator.userAgent)
+
 // Canvas
 const canvas = document.createElement('canvas')
 canvas.classList.add('webgl')
@@ -17,7 +21,16 @@ canvas.classList.add('webgl')
 const asciiContainer = document.querySelector('.ascii-bg')
 if (!asciiContainer) {
   console.error('ASCII container .ascii-bg not found')
+  // Create fallback container
+  const fallback = document.createElement('div')
+  fallback.className = 'ascii-bg'
+  fallback.style.width = '100%'
+  fallback.style.height = '400px'
+  document.body.appendChild(fallback)
+  asciiContainer = fallback
 }
+
+console.log('ASCII container found:', asciiContainer)
 asciiContainer.appendChild(canvas)
 
 // Scene
@@ -25,16 +38,20 @@ const scene = new THREE.Scene()
 
 // Sizes
 const sizes = {
-  width: asciiContainer.offsetWidth,
-  height: asciiContainer.offsetHeight,
+  width: asciiContainer.offsetWidth || window.innerWidth,
+  height: asciiContainer.offsetHeight || 400,
 }
+
+console.log('Initial sizes:', sizes)
 
 // Mobile breakpoint
 const MOBILE_BREAKPOINT = 768
 
 // Check if mobile
 function isMobile() {
-  return window.innerWidth <= MOBILE_BREAKPOINT
+  const mobile = window.innerWidth <= MOBILE_BREAKPOINT
+  console.log('Is mobile:', mobile, 'Width:', window.innerWidth)
+  return mobile
 }
 
 // Camera
@@ -60,12 +77,17 @@ scene.add(mainlight, backlight, secondlight)
 const gltfLoader = new GLTFLoader()
 let model = null
 let mixer = null
+let modelLoaded = false
 const referenceSize = 1440 // design reference width for scaling
+
+console.log('Loading GLB model...')
 
 gltfLoader.load(
   'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9b3f0ed751939a196b255_shield-orbit.glb.txt',
   (gltf) => {
+    console.log('GLB model loaded successfully')
     model = gltf.scene
+    modelLoaded = true
     scene.add(model)
 
     // If there are animations in the glb
@@ -80,6 +102,12 @@ gltfLoader.load(
 
     // Initial scale
     updateModelScale()
+  },
+  (progress) => {
+    console.log('Loading progress:', progress.loaded / progress.total * 100 + '%')
+  },
+  (error) => {
+    console.error('GLB loading error:', error)
   }
 )
 
@@ -92,10 +120,14 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
+console.log('Renderer created, pixel ratio:', window.devicePixelRatio)
+
 // ASCII Effect with responsive font size
 let effect = null
 
 function createAsciiEffect() {
+  console.log('Creating ASCII effect...')
+
   // Remove existing effect if it exists
   if (effect && effect.domElement) {
     asciiContainer.removeChild(effect.domElement)
@@ -103,24 +135,37 @@ function createAsciiEffect() {
 
   const characters = ` .:=*R$#@`
 
-  effect = new AsciiEffect(renderer, characters, { invert: false })
+  try {
+    effect = new AsciiEffect(renderer, characters, { invert: false })
+    console.log('ASCII effect created')
 
-  effect.setSize(sizes.width, sizes.height)
-  asciiContainer.appendChild(effect.domElement)
+    effect.setSize(sizes.width, sizes.height)
+    asciiContainer.appendChild(effect.domElement)
 
-  // Add mobile/desktop class for CSS targeting
-  if (isMobile()) {
-    effect.domElement.classList.add('ascii-mobile')
-    effect.domElement.classList.remove('ascii-desktop')
+    // Add mobile/desktop class for CSS targeting
+    if (isMobile()) {
+      effect.domElement.classList.add('ascii-mobile')
+      effect.domElement.classList.remove('ascii-desktop')
 
-    // Apply mobile font directly via JS as fallback
-    effect.domElement.style.fontFamily = 'Monaco, "Lucida Console", "Courier New", monospace'
-    effect.domElement.style.fontSize = '8px'
-    effect.domElement.style.lineHeight = '8px'
-    effect.domElement.style.fontWeight = 'normal'
-  } else {
-    effect.domElement.classList.add('ascii-desktop')
-    effect.domElement.classList.remove('ascii-mobile')
+      // Apply mobile font directly via JS as fallback
+      effect.domElement.style.fontFamily = 'Monaco, "Lucida Console", "Courier New", monospace'
+      effect.domElement.style.fontSize = '8px'
+      effect.domElement.style.lineHeight = '8px'
+      effect.domElement.style.fontWeight = 'normal'
+      effect.domElement.style.letterSpacing = '0px'
+
+      console.log('Applied mobile styles to ASCII effect')
+    } else {
+      effect.domElement.classList.add('ascii-desktop')
+      effect.domElement.classList.remove('ascii-mobile')
+    }
+
+    // Force visibility
+    effect.domElement.style.visibility = 'visible'
+    effect.domElement.style.display = 'block'
+
+  } catch (error) {
+    console.error('ASCII effect creation failed:', error)
   }
 }
 
@@ -137,6 +182,15 @@ window.addEventListener('mousemove', (event) => {
   cursor.y = (event.clientY / sizes.height - 0.5) * 2
 })
 
+// Touch handling for mobile
+window.addEventListener('touchmove', (event) => {
+  if (event.touches.length > 0) {
+    const touch = event.touches[0]
+    cursor.x = (touch.clientX / sizes.width - 0.5) * 2
+    cursor.y = (touch.clientY / sizes.height - 0.5) * 2
+  }
+})
+
 let scrollY = 0
 window.addEventListener('scroll', () => {
   scrollY = window.scrollY * 0.003
@@ -146,24 +200,30 @@ window.addEventListener('scroll', () => {
 function updateModelScale() {
   if (!model) return
 
-  const baseScale = asciiContainer.offsetWidth / referenceSize
+  const baseScale = Math.max(asciiContainer.offsetWidth, 300) / referenceSize
 
   if (isMobile()) {
-    // On mobile, make the model much bigger (2.5x) to compensate for smaller screen
-    const mobileScale = baseScale * 2.5
+    // On mobile, make the model much bigger (3x) to compensate for smaller screen
+    const mobileScale = baseScale * 3
     model.scale.set(mobileScale, mobileScale, mobileScale)
+    console.log('Applied mobile model scale:', mobileScale)
   } else {
     // Desktop: normal scaling
     model.scale.set(baseScale, baseScale, baseScale)
+    console.log('Applied desktop model scale:', baseScale)
   }
 }
 
 function resize() {
+  console.log('Resize triggered')
+
   const wasMobile = sizes.width <= MOBILE_BREAKPOINT
   const isNowMobile = window.innerWidth <= MOBILE_BREAKPOINT
 
-  sizes.width = asciiContainer.offsetWidth
-  sizes.height = asciiContainer.offsetHeight
+  sizes.width = asciiContainer.offsetWidth || window.innerWidth
+  sizes.height = asciiContainer.offsetHeight || 400
+
+  console.log('New sizes:', sizes)
 
   camera.aspect = sizes.width / sizes.height
   camera.updateProjectionMatrix()
@@ -172,9 +232,12 @@ function resize() {
 
   // Recreate ASCII effect if we switched between mobile/desktop
   if (wasMobile !== isNowMobile) {
+    console.log('Mobile/desktop switch detected, recreating ASCII effect')
     createAsciiEffect()
   } else {
-    effect.setSize(sizes.width, sizes.height)
+    if (effect) {
+      effect.setSize(sizes.width, sizes.height)
+    }
   }
 
   updateModelScale()
@@ -185,6 +248,11 @@ let resizeTimeout
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimeout)
   resizeTimeout = setTimeout(resize, 100)
+})
+
+// Also handle orientation change
+window.addEventListener('orientationchange', () => {
+  setTimeout(resize, 100)
 })
 
 resize()
@@ -200,7 +268,7 @@ function animate() {
     mixer.update(delta)
   }
 
-  if (model) {
+  if (model && modelLoaded) {
     const cursorXOffset = cursor.x * 0.3
     const cursorYOffset = cursor.y * 0.1
 
@@ -212,7 +280,22 @@ function animate() {
     model.position.z += (scrollY - model.position.z) * 0.5
   }
 
-  effect.render(scene, camera)
+  if (effect) {
+    try {
+      effect.render(scene, camera)
+    } catch (error) {
+      console.error('Render error:', error)
+    }
+  }
 }
 
 animate()
+
+// Debug info for mobile
+if (isMobile()) {
+  console.log('Mobile device detected - debug info:')
+  console.log('Screen dimensions:', screen.width, 'x', screen.height)
+  console.log('Window dimensions:', window.innerWidth, 'x', window.innerHeight)
+  console.log('Container dimensions:', asciiContainer.offsetWidth, 'x', asciiContainer.offsetHeight)
+  console.log('Device pixel ratio:', window.devicePixelRatio)
+}
