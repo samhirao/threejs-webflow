@@ -57,7 +57,7 @@ function initializeApp() {
 
     // camera
     const camera = new THREE.PerspectiveCamera(25, sizes.width / sizes.height, 0.1, 1000)
-    camera.position.z = 4
+    camera.position.set = 4
     scene.add(camera)
 
     // lights - simplified for mobile performance
@@ -198,8 +198,8 @@ function initializeApp() {
     let isInteracting = false
 
     function updateCursor(x, y) {
-      cursor.x = (x / sizes.width - 0.5) * 2
-      cursor.y = (y / sizes.height - 0.5) * 2
+      cursor.x = (x / sizes.width - 0.5) * 0
+      cursor.y = (y / sizes.height - 0.5) * 0
     }
 
     // mouse events
@@ -239,7 +239,7 @@ function initializeApp() {
 
       camera.aspect = sizes.width / sizes.height
       camera.updateProjectionMatrix()
-      camera.position.z = 4
+      camera.position.z = isMobile() ? 2.5 : 4
 
       renderer.setSize(sizes.width, sizes.height)
 
@@ -301,7 +301,7 @@ function initializeApp() {
         model.position.set(-0.1, -0.1, 0) // keep model at origin
 
         // camera moves closer as you scroll down
-        const baseZ = 2
+        const baseZ = 4
         camera.position.z = baseZ - scrollY // subtract scrollY to move closer
       }
 
