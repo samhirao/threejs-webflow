@@ -230,8 +230,18 @@ window.addEventListener('touchmove', (event) => {
 })
 
 let scrollY = 0
+const heroCenter = document.querySelector('.hero-center')
+
 window.addEventListener('scroll', () => {
-  scrollY = window.scrollY * 0.001
+  if (heroCenter) {
+    // Calculate scroll relative to .hero-center position
+    const rect = heroCenter.getBoundingClientRect()
+    const scrollProgress = Math.max(0, -rect.top / (rect.height || 1))
+    scrollY = scrollProgress * 0.001
+  } else {
+    // Fallback to regular scroll
+    scrollY = window.scrollY * 0.001
+  }
 })
 
 // ===== Responsive model scaling =====
