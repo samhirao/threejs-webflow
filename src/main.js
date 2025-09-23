@@ -101,22 +101,21 @@ function createAsciiEffect() {
     asciiContainer.removeChild(effect.domElement)
   }
 
-  // Adjust font size based on screen size
-  const fontSize = isMobile() ? '8px' : '12px'
   const characters = ` .:=*R$#@`
 
-  effect = new AsciiEffect(renderer, characters, {
-    invert: false,
-    fontSize: fontSize,
-    fontWeight: 'normal'
-  })
+  effect = new AsciiEffect(renderer, characters, { invert: false })
 
   effect.setSize(sizes.width, sizes.height)
   asciiContainer.appendChild(effect.domElement)
 
-  // Apply font size via CSS as fallback
+  // Apply responsive font size via CSS
+  const fontSize = isMobile() ? '6px' : '10px'
+  const lineHeight = isMobile() ? '6px' : '10px'
+
   effect.domElement.style.fontSize = fontSize
-  effect.domElement.style.lineHeight = fontSize
+  effect.domElement.style.lineHeight = lineHeight
+  effect.domElement.style.fontFamily = 'monospace'
+  effect.domElement.style.fontWeight = 'normal'
 }
 
 // Initialize ASCII effect
@@ -144,8 +143,8 @@ function updateModelScale() {
   const baseScale = asciiContainer.offsetWidth / referenceSize
 
   if (isMobile()) {
-    // On mobile, make the model bigger (1.8x) to compensate for smaller screen
-    const mobileScale = baseScale * 1.8
+    // On mobile, make the model much bigger (2.5x) to compensate for smaller screen
+    const mobileScale = baseScale * 2.5
     model.scale.set(mobileScale, mobileScale, mobileScale)
   } else {
     // Desktop: normal scaling
