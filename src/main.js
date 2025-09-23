@@ -6,8 +6,6 @@ import animateTitle from './features/animateTitle'
 import './styles/style.css'
 
 // Features
-// createBadge() // Commented out to remove "It works!" badge
-animateTitle()
 
 // Debug logging for mobile
 console.log('Script loaded, window width:', window.innerWidth)
