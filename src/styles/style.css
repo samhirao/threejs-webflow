@@ -6,13 +6,25 @@
 .ascii-bg * {
   font-family: 'Martian Mono', monospace !important;
   font-weight: 300 !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
 }
 
-/* Mobile responsive font size */
+/* Mobile responsiveness for ASCII - use system fonts */
 @media (max-width: 768px) {
-  .ascii-bg * {
-    font-size: 6px !important;
-    line-height: 6px !important;
+
+  .ascii-bg .ascii-mobile,
+  .ascii-bg .ascii-mobile * {
+    font-family: Monaco, "Lucida Console", "Courier New", Consolas, monospace !important;
+    font-size: 8px !important;
+    line-height: 8px !important;
+    font-weight: normal !important;
   }
+}
+
+/* Desktop ASCII (keep your Martian Mono) */
+.ascii-bg .ascii-desktop * {
+  font-family: 'Martian Mono', monospace !important;
+  font-size: 12px !important;
+  line-height: 12px !important;
+  font-weight: 300 !important;
 }

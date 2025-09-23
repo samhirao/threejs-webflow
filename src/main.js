@@ -108,14 +108,20 @@ function createAsciiEffect() {
   effect.setSize(sizes.width, sizes.height)
   asciiContainer.appendChild(effect.domElement)
 
-  // Apply responsive font size via CSS
-  const fontSize = isMobile() ? '6px' : '10px'
-  const lineHeight = isMobile() ? '6px' : '10px'
+  // Add mobile/desktop class for CSS targeting
+  if (isMobile()) {
+    effect.domElement.classList.add('ascii-mobile')
+    effect.domElement.classList.remove('ascii-desktop')
 
-  effect.domElement.style.fontSize = fontSize
-  effect.domElement.style.lineHeight = lineHeight
-  effect.domElement.style.fontFamily = 'monospace'
-  effect.domElement.style.fontWeight = 'normal'
+    // Apply mobile font directly via JS as fallback
+    effect.domElement.style.fontFamily = 'Monaco, "Lucida Console", "Courier New", monospace'
+    effect.domElement.style.fontSize = '8px'
+    effect.domElement.style.lineHeight = '8px'
+    effect.domElement.style.fontWeight = 'normal'
+  } else {
+    effect.domElement.classList.add('ascii-desktop')
+    effect.domElement.classList.remove('ascii-mobile')
+  }
 }
 
 // Initialize ASCII effect
