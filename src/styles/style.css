@@ -1,4 +1,10 @@
 .webgl {
-  width: 100%;
-  height: 100%;
+  width: 50%;
+  height: 50%;
+}
+
+.ascii-bg * {
+  font-family: 'Martian Mono', monospace !important;
+  font-weight: 300 !important;
+  font-size: 12px !important;
 }
