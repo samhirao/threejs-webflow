@@ -164,8 +164,21 @@ function createAsciiEffect() {
     effect.domElement.style.visibility = 'visible'
     effect.domElement.style.display = 'block'
 
+    // Start rendering immediately with empty scene
+    startRendering()
+
   } catch (error) {
     console.error('ASCII effect creation failed:', error)
+  }
+}
+
+// Separate rendering function
+function startRendering() {
+  console.log('Starting ASCII rendering...')
+
+  // Render an initial frame to show ASCII immediately
+  if (effect) {
+    effect.render(scene, camera)
   }
 }
 
