@@ -8,23 +8,3 @@
   font-weight: 300 !important;
   font-size: 12px !important;
 }
-
-/* Mobile responsiveness for ASCII - use system fonts */
-@media (max-width: 768px) {
-
-  .ascii-bg .ascii-mobile,
-  .ascii-bg .ascii-mobile * {
-    font-family: Monaco, "Lucida Console", "Courier New", Consolas, monospace !important;
-    font-size: 8px !important;
-    line-height: 8px !important;
-    font-weight: normal !important;
-  }
-}
-
-/* Desktop ASCII (keep your Martian Mono) */
-.ascii-bg .ascii-desktop * {
-  font-family: 'Martian Mono', monospace !important;
-  font-size: 12px !important;
-  line-height: 12px !important;
-  font-weight: 300 !important;
-}

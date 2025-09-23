@@ -230,13 +230,8 @@ window.addEventListener('touchmove', (event) => {
 })
 
 let scrollY = 0
-let baseScrollScale = 1
 window.addEventListener('scroll', () => {
-  scrollY = window.scrollY
-  // Calculate scroll-based scale (desktop only)
-  if (!isMobile()) {
-    baseScrollScale = 1 + (scrollY * 0.001) // Scale increases as you scroll down
-  }
+  scrollY = window.scrollY * 0.001
 })
 
 // ===== Responsive model scaling =====
@@ -252,11 +247,10 @@ function updateModelScale() {
     camera.position.z = 2.5
     console.log('Applied mobile model scale:', mobileScale)
   } else {
-    // Desktop: normal scaling + scroll-based scaling
-    const desktopScale = baseScale * baseScrollScale
-    model.scale.set(desktopScale, desktopScale, desktopScale)
+    // Desktop: normal scaling only (scroll handled in animate loop)
+    model.scale.set(baseScale, baseScale, baseScale)
     camera.position.z = 4
-    console.log('Applied desktop model scale:', desktopScale, 'scroll scale:', baseScrollScale)
+    console.log('Applied desktop model scale:', baseScale)
   }
 }
 
@@ -338,9 +332,9 @@ function animate() {
     model.position.y = -0.1 // move it slightly down
     model.position.x = -0.1 // move it to the left
 
-    // Update scale based on scroll (desktop only)
+    // Smooth scroll animation (desktop only)
     if (!isMobile()) {
-      updateModelScale() // This will apply the scroll-based scaling
+      model.position.z += (scrollY - model.position.z) * 0.5
     }
   }
 
