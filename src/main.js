@@ -93,7 +93,7 @@ function initializeApp() {
     console.log('loading model...')
 
     loader.load(
-      '.',
+      'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9af3eb83f278f07e827ab_shield-three.glb.txt',
       (gltf) => {
         console.log('model loaded')
         model = gltf.scene
