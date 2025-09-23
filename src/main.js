@@ -6,6 +6,8 @@ import animateTitle from './features/animateTitle'
 import './styles/style.css'
 
 // Features
+// createBadge() // Commented out to remove "It works!" badge
+animateTitle()
 
 // Debug logging for mobile
 console.log('Script loaded, window width:', window.innerWidth)
@@ -228,8 +230,13 @@ window.addEventListener('touchmove', (event) => {
 })
 
 let scrollY = 0
+let baseScrollScale = 1
 window.addEventListener('scroll', () => {
-  scrollY = window.scrollY * 0.003
+  scrollY = window.scrollY
+  // Calculate scroll-based scale (desktop only)
+  if (!isMobile()) {
+    baseScrollScale = 1 + (scrollY * 0.001) // Scale increases as you scroll down
+  }
 })
 
 // ===== Responsive model scaling =====
@@ -239,16 +246,17 @@ function updateModelScale() {
   const baseScale = Math.max(asciiContainer.offsetWidth, 300) / referenceSize
 
   if (isMobile()) {
-    // On mobile, make the model MUCH bigger (5x) and adjust camera
+    // On mobile, make the model MUCH bigger (5x) and no scroll scaling
     const mobileScale = baseScale * 5
     model.scale.set(mobileScale, mobileScale, mobileScale)
     camera.position.z = 2.5
     console.log('Applied mobile model scale:', mobileScale)
   } else {
-    // Desktop: normal scaling
-    model.scale.set(baseScale, baseScale, baseScale)
+    // Desktop: normal scaling + scroll-based scaling
+    const desktopScale = baseScale * baseScrollScale
+    model.scale.set(desktopScale, desktopScale, desktopScale)
     camera.position.z = 4
-    console.log('Applied desktop model scale:', baseScale)
+    console.log('Applied desktop model scale:', desktopScale, 'scroll scale:', baseScrollScale)
   }
 }
 
@@ -330,9 +338,9 @@ function animate() {
     model.position.y = -0.1 // move it slightly down
     model.position.x = -0.1 // move it to the left
 
-    // Apply scroll animation only on desktop
+    // Update scale based on scroll (desktop only)
     if (!isMobile()) {
-      model.position.z += (scrollY - model.position.z) * 0.5
+      updateModelScale() // This will apply the scroll-based scaling
     }
   }
 
