@@ -57,7 +57,7 @@ function initializeApp() {
 
     // camera
     const camera = new THREE.PerspectiveCamera(25, sizes.width / sizes.height, 0.1, 1000)
-    camera.position.z = 4
+    camera.position.z = isMobile() ? 2.5 : 4
     scene.add(camera)
 
     // lights - simplified for mobile performance
@@ -226,9 +226,9 @@ function initializeApp() {
       }, 100)
     }, { passive: true })
 
-    // scroll with lenis integration
+    // scroll - simple camera zoom
     window.addEventListener('scroll', () => {
-      scrollY = window.scrollY * 0.001
+      scrollY = window.scrollY * 0.01
     }, { passive: true })
 
     // resize handling
