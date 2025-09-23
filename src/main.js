@@ -1,9 +1,7 @@
 import * as THREE from 'three'
 import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-
 import animateTitle from './features/animateTitle'
-
 // import createBadge from './features/createBasge' // Removed badge import
 import './styles/style.css'
 
@@ -20,7 +18,7 @@ const canvas = document.createElement('canvas')
 canvas.classList.add('webgl')
 
 // Attach to ASCII container div
-let asciiContainer = document.querySelector('.ascii-bg')
+const asciiContainer = document.querySelector('.ascii-bg')
 if (!asciiContainer) {
   console.error('ASCII container .ascii-bg not found')
   // Create fallback container
@@ -116,10 +114,7 @@ gltfLoader.load(
     updateModelScale()
   },
   (progress) => {
-    console.log(
-      'Loading progress:',
-      (progress.loaded / progress.total) * 100 + '%'
-    )
+    console.log('Loading progress:', progress.loaded / progress.total * 100 + '%')
   },
   (error) => {
     console.error('GLB loading error:', error)
@@ -164,8 +159,7 @@ function createAsciiEffect() {
       effect.domElement.classList.remove('ascii-desktop')
 
       // Apply mobile font directly via JS as fallback
-      effect.domElement.style.fontFamily =
-        'Monaco, "Lucida Console", "Courier New", monospace'
+      effect.domElement.style.fontFamily = 'Monaco, "Lucida Console", "Courier New", monospace'
       effect.domElement.style.fontSize = '8px'
       effect.domElement.style.lineHeight = '8px'
       effect.domElement.style.fontWeight = 'normal'
@@ -183,6 +177,7 @@ function createAsciiEffect() {
 
     // Start rendering immediately with empty scene
     startRendering()
+
   } catch (error) {
     console.error('ASCII effect creation failed:', error)
   }
@@ -210,7 +205,7 @@ const placeholderMaterial = new THREE.MeshBasicMaterial({
   color: 0x333333,
   wireframe: true,
   transparent: true,
-  opacity: 0.3,
+  opacity: 0.3
 })
 const placeholderMesh = new THREE.Mesh(placeholderGeometry, placeholderMaterial)
 scene.add(placeholderMesh)
@@ -235,17 +230,12 @@ window.addEventListener('touchmove', (event) => {
 })
 
 let scrollY = 0
-const heroCenter = document.querySelector('.hero-center')
-
+let baseScrollScale = 1
 window.addEventListener('scroll', () => {
-  if (heroCenter) {
-    // Calculate scroll relative to .hero-center position
-    const rect = heroCenter.getBoundingClientRect()
-    const scrollProgress = Math.max(0, -rect.top / (rect.height || 1))
-    scrollY = scrollProgress * 0.001
-  } else {
-    // Fallback to regular scroll
-    scrollY = window.scrollY * 0.001
+  scrollY = window.scrollY
+  // Calculate scroll-based scale (desktop only)
+  if (!isMobile()) {
+    baseScrollScale = 1 + (scrollY * 0.001) // Scale increases as you scroll down
   }
 })
 
@@ -262,10 +252,11 @@ function updateModelScale() {
     camera.position.z = 2.5
     console.log('Applied mobile model scale:', mobileScale)
   } else {
-    // Desktop: normal scaling only (scroll handled in animate loop)
-    model.scale.set(baseScale, baseScale, baseScale)
+    // Desktop: normal scaling + scroll-based scaling
+    const desktopScale = baseScale * baseScrollScale
+    model.scale.set(desktopScale, desktopScale, desktopScale)
     camera.position.z = 4
-    console.log('Applied desktop model scale:', baseScale)
+    console.log('Applied desktop model scale:', desktopScale, 'scroll scale:', baseScrollScale)
   }
 }
 
@@ -347,8 +338,10 @@ function animate() {
     model.position.y = -0.1 // move it slightly down
     model.position.x = -0.1 // move it to the left
 
-    // Smooth scroll animation (all devices)
-    model.position.z += (scrollY - model.position.z) * 0.5
+    // Update scale based on scroll (desktop only)
+    if (!isMobile()) {
+      updateModelScale() // This will apply the scroll-based scaling
+    }
   }
 
   if (effect) {
@@ -367,11 +360,6 @@ if (isMobile()) {
   console.log('Mobile device detected - debug info:')
   console.log('Screen dimensions:', screen.width, 'x', screen.height)
   console.log('Window dimensions:', window.innerWidth, 'x', window.innerHeight)
-  console.log(
-    'Container dimensions:',
-    asciiContainer.offsetWidth,
-    'x',
-    asciiContainer.offsetHeight
-  )
+  console.log('Container dimensions:', asciiContainer.offsetWidth, 'x', asciiContainer.offsetHeight)
   console.log('Device pixel ratio:', window.devicePixelRatio)
 }
