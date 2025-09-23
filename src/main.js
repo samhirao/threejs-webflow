@@ -9,16 +9,47 @@ import './styles/style.css'
 createBadge()
 animateTitle()
 
+// iOS Detection
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
 // Debug logging for mobile
 console.log('Script loaded, window width:', window.innerWidth)
 console.log('User agent:', navigator.userAgent)
+console.log('Is iOS:', isIOS())
+console.log('WebGL support:', !!window.WebGLRenderingContext)
+
+// Test WebGL context creation
+function testWebGL() {
+  try {
+    const canvas = document.createElement('canvas')
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    if (!gl) {
+      console.error('WebGL not supported')
+      return false
+    }
+    console.log('WebGL context created successfully')
+    console.log('WebGL vendor:', gl.getParameter(gl.VENDOR))
+    console.log('WebGL renderer:', gl.getParameter(gl.RENDERER))
+    return true
+  } catch (e) {
+    console.error('WebGL test failed:', e)
+    return false
+  }
+}
+
+if (!testWebGL()) {
+  console.error('WebGL test failed - falling back to error message')
+  // You might want to show a fallback message here
+}
 
 // Canvas
 const canvas = document.createElement('canvas')
 canvas.classList.add('webgl')
 
 // Attach to ASCII container div
-const asciiContainer = document.querySelector('.ascii-bg')
+let asciiContainer = document.querySelector('.ascii-bg')
 if (!asciiContainer) {
   console.error('ASCII container .ascii-bg not found')
   // Create fallback container
@@ -26,6 +57,8 @@ if (!asciiContainer) {
   fallback.className = 'ascii-bg'
   fallback.style.width = '100%'
   fallback.style.height = '400px'
+  fallback.style.position = 'relative'
+  fallback.style.overflow = 'hidden'
   document.body.appendChild(fallback)
   asciiContainer = fallback
 }
@@ -36,10 +69,18 @@ asciiContainer.appendChild(canvas)
 // Scene
 const scene = new THREE.Scene()
 
-// Sizes
+// Sizes - iOS specific handling
 const sizes = {
   width: asciiContainer.offsetWidth || window.innerWidth,
   height: asciiContainer.offsetHeight || 400,
+}
+
+// iOS Safari viewport fix
+if (isIOS()) {
+  // Force container dimensions on iOS
+  sizes.width = Math.min(asciiContainer.offsetWidth || window.innerWidth, window.screen.width)
+  sizes.height = Math.min(asciiContainer.offsetHeight || 400, window.screen.height * 0.4)
+  console.log('iOS adjusted sizes:', sizes)
 }
 
 console.log('Initial sizes:', sizes)
@@ -64,12 +105,13 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.z = 4
 scene.add(camera)
 
-// Lights
-const mainlight = new THREE.DirectionalLight('white', 1)
+// Lights - Reduced intensity for mobile performance
+const lightIntensity = isMobile() ? 0.8 : 1
+const mainlight = new THREE.DirectionalLight('white', lightIntensity)
 mainlight.position.set(1, 2, 0.5)
-const backlight = new THREE.DirectionalLight('white', 1)
+const backlight = new THREE.DirectionalLight('white', lightIntensity * 0.5)
 backlight.position.set(0, 5, 2)
-const secondlight = new THREE.DirectionalLight('white', 1)
+const secondlight = new THREE.DirectionalLight('white', lightIntensity * 0.3)
 secondlight.position.set(1, 0, 1)
 scene.add(mainlight, backlight, secondlight)
 
@@ -82,9 +124,24 @@ const referenceSize = 1440 // design reference width for scaling
 
 console.log('Loading GLB model...')
 
+// Add timeout for model loading on slow connections
+const modelLoadTimeout = setTimeout(() => {
+  if (!modelLoaded) {
+    console.warn('Model loading timeout - proceeding without model')
+    // You could add a fallback geometry here
+    const geometry = new THREE.BoxGeometry(1, 1, 1)
+    const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 })
+    model = new THREE.Mesh(geometry, material)
+    modelLoaded = true
+    scene.add(model)
+    updateModelScale()
+  }
+}, 10000) // 10 second timeout
+
 gltfLoader.load(
   'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9b3f0ed751939a196b255_shield-orbit.glb.txt',
   (gltf) => {
+    clearTimeout(modelLoadTimeout)
     console.log('GLB model loaded successfully')
     model = gltf.scene
     modelLoaded = true
@@ -107,22 +164,47 @@ gltfLoader.load(
     console.log('Loading progress:', progress.loaded / progress.total * 100 + '%')
   },
   (error) => {
+    clearTimeout(modelLoadTimeout)
     console.error('GLB loading error:', error)
+    // Fallback geometry
+    const geometry = new THREE.BoxGeometry(1, 1, 1)
+    const material = new THREE.MeshPhongMaterial({ color: 0xff0000 })
+    model = new THREE.Mesh(geometry, material)
+    modelLoaded = true
+    scene.add(model)
+    updateModelScale()
   }
 )
 
-// Renderer
-const renderer = new THREE.WebGLRenderer({
+// Renderer with iOS-specific settings
+const rendererConfig = {
   canvas: canvas,
-  antialias: true,
+  antialias: !isMobile(), // Disable antialiasing on mobile for performance
   alpha: true,
-})
+  powerPreference: isMobile() ? 'low-power' : 'high-performance',
+  failIfMajorPerformanceCaveat: false, // Important for iOS compatibility
+  preserveDrawingBuffer: true, // Helps with iOS rendering issues
+}
+
+console.log('Creating WebGL renderer with config:', rendererConfig)
+
+let renderer
+try {
+  renderer = new THREE.WebGLRenderer(rendererConfig)
+  console.log('WebGL renderer created successfully')
+} catch (error) {
+  console.error('WebGL renderer creation failed:', error)
+  throw error
+}
+
 renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+// Limit pixel ratio on mobile to improve performance
+const pixelRatio = isMobile() ? Math.min(window.devicePixelRatio, 2) : Math.min(window.devicePixelRatio, 2)
+renderer.setPixelRatio(pixelRatio)
 
-console.log('Renderer created, pixel ratio:', window.devicePixelRatio)
+console.log('Renderer created, pixel ratio:', pixelRatio)
 
-// ASCII Effect with responsive font size
+// ASCII Effect with responsive font size and iOS fixes
 let effect = null
 
 function createAsciiEffect() {
@@ -130,7 +212,11 @@ function createAsciiEffect() {
 
   // Remove existing effect if it exists
   if (effect && effect.domElement) {
-    asciiContainer.removeChild(effect.domElement)
+    try {
+      asciiContainer.removeChild(effect.domElement)
+    } catch (e) {
+      console.warn('Could not remove existing effect element:', e)
+    }
   }
 
   const characters = ` .:=*R$#@`
@@ -140,35 +226,65 @@ function createAsciiEffect() {
     console.log('ASCII effect created')
 
     effect.setSize(sizes.width, sizes.height)
-    asciiContainer.appendChild(effect.domElement)
 
-    // Add mobile/desktop class for CSS targeting
-    if (isMobile()) {
-      effect.domElement.classList.add('ascii-mobile')
-      effect.domElement.classList.remove('ascii-desktop')
+    // Ensure the ASCII element is properly added
+    if (effect.domElement) {
+      asciiContainer.appendChild(effect.domElement)
+      console.log('ASCII element added to container')
 
-      // Apply mobile font directly via JS as fallback
-      effect.domElement.style.fontFamily = 'Monaco, "Lucida Console", "Courier New", monospace'
-      effect.domElement.style.fontSize = '8px'
-      effect.domElement.style.lineHeight = '8px'
-      effect.domElement.style.fontWeight = 'normal'
-      effect.domElement.style.letterSpacing = '0px'
+      // Add mobile/desktop class for CSS targeting
+      if (isMobile()) {
+        effect.domElement.classList.add('ascii-mobile')
+        effect.domElement.classList.remove('ascii-desktop')
 
-      console.log('Applied mobile styles to ASCII effect')
+        // Apply mobile font directly via JS as fallback
+        const fontSize = isIOS() ? '6px' : '8px' // Smaller font for iOS
+        effect.domElement.style.fontFamily = 'Monaco, "Lucida Console", "Courier New", monospace'
+        effect.domElement.style.fontSize = fontSize
+        effect.domElement.style.lineHeight = fontSize
+        effect.domElement.style.fontWeight = 'normal'
+        effect.domElement.style.letterSpacing = '0px'
+        effect.domElement.style.textRendering = 'optimizeSpeed'
+        effect.domElement.style.webkitFontSmoothing = 'none'
+        effect.domElement.style.webkitTextStroke = 'initial'
+
+        console.log('Applied mobile styles to ASCII effect')
+      } else {
+        effect.domElement.classList.add('ascii-desktop')
+        effect.domElement.classList.remove('ascii-mobile')
+      }
+
+      // Force visibility and positioning
+      effect.domElement.style.visibility = 'visible'
+      effect.domElement.style.display = 'block'
+      effect.domElement.style.position = 'absolute'
+      effect.domElement.style.top = '0'
+      effect.domElement.style.left = '0'
+      effect.domElement.style.width = '100%'
+      effect.domElement.style.height = '100%'
+      effect.domElement.style.zIndex = '1'
+
+      // iOS specific fixes
+      if (isIOS()) {
+        effect.domElement.style.webkitUserSelect = 'none'
+        effect.domElement.style.webkitTouchCallout = 'none'
+        effect.domElement.style.webkitTapHighlightColor = 'transparent'
+        effect.domElement.style.touchAction = 'manipulation'
+      }
+
+      // Start rendering immediately
+      startRendering()
     } else {
-      effect.domElement.classList.add('ascii-desktop')
-      effect.domElement.classList.remove('ascii-mobile')
+      console.error('ASCII effect domElement is null')
     }
-
-    // Force visibility
-    effect.domElement.style.visibility = 'visible'
-    effect.domElement.style.display = 'block'
-
-    // Start rendering immediately with empty scene
-    startRendering()
 
   } catch (error) {
     console.error('ASCII effect creation failed:', error)
+    // Show error message to user
+    const errorDiv = document.createElement('div')
+    errorDiv.textContent = 'WebGL not supported on this device'
+    errorDiv.style.cssText = 'color: white; text-align: center; padding: 20px; font-family: monospace;'
+    asciiContainer.appendChild(errorDiv)
   }
 }
 
@@ -178,36 +294,57 @@ function startRendering() {
 
   // Render an initial frame to show ASCII immediately
   if (effect) {
-    effect.render(scene, camera)
+    try {
+      effect.render(scene, camera)
+      console.log('Initial ASCII render successful')
+    } catch (error) {
+      console.error('Initial ASCII render failed:', error)
+    }
   }
 }
 
-// Initialize ASCII effect
-createAsciiEffect()
+// Initialize ASCII effect after a small delay to ensure DOM is ready
+setTimeout(() => {
+  createAsciiEffect()
+}, 100)
 
 // Hide original canvas
 canvas.style.display = 'none'
 
-// Cursor & Scroll
+// Cursor & Scroll with iOS touch handling
 const cursor = { x: 0, y: 0 }
+
+// Mouse events
 window.addEventListener('mousemove', (event) => {
   cursor.x = (event.clientX / sizes.width - 0.5) * 2
   cursor.y = (event.clientY / sizes.height - 0.5) * 2
 })
 
-// Touch handling for mobile
+// Touch handling for mobile with iOS fixes
+let lastTouch = { x: 0, y: 0 }
+
+window.addEventListener('touchstart', (event) => {
+  if (event.touches.length > 0) {
+    const touch = event.touches[0]
+    lastTouch.x = touch.clientX
+    lastTouch.y = touch.clientY
+  }
+}, { passive: true })
+
 window.addEventListener('touchmove', (event) => {
   if (event.touches.length > 0) {
     const touch = event.touches[0]
     cursor.x = (touch.clientX / sizes.width - 0.5) * 2
     cursor.y = (touch.clientY / sizes.height - 0.5) * 2
+    lastTouch.x = touch.clientX
+    lastTouch.y = touch.clientY
   }
-})
+}, { passive: true })
 
 let scrollY = 0
 window.addEventListener('scroll', () => {
   scrollY = window.scrollY * 0.003
-})
+}, { passive: true })
 
 // ===== Responsive model scaling =====
 function updateModelScale() {
@@ -216,8 +353,8 @@ function updateModelScale() {
   const baseScale = Math.max(asciiContainer.offsetWidth, 300) / referenceSize
 
   if (isMobile()) {
-    // On mobile, make the model much bigger (3x) to compensate for smaller screen
-    const mobileScale = baseScale * 3
+    // On mobile, make the model bigger to compensate for smaller screen
+    const mobileScale = baseScale * (isIOS() ? 2.5 : 3) // Slightly smaller on iOS
     model.scale.set(mobileScale, mobileScale, mobileScale)
     console.log('Applied mobile model scale:', mobileScale)
   } else {
@@ -236,20 +373,32 @@ function resize() {
   sizes.width = asciiContainer.offsetWidth || window.innerWidth
   sizes.height = asciiContainer.offsetHeight || 400
 
+  // iOS specific size adjustments
+  if (isIOS()) {
+    sizes.width = Math.min(sizes.width, window.screen.width)
+    sizes.height = Math.min(sizes.height, window.screen.height * 0.4)
+  }
+
   console.log('New sizes:', sizes)
 
   camera.aspect = sizes.width / sizes.height
   camera.updateProjectionMatrix()
 
-  renderer.setSize(sizes.width, sizes.height)
+  if (renderer) {
+    renderer.setSize(sizes.width, sizes.height)
+  }
 
   // Recreate ASCII effect if we switched between mobile/desktop
   if (wasMobile !== isNowMobile) {
     console.log('Mobile/desktop switch detected, recreating ASCII effect')
-    createAsciiEffect()
+    setTimeout(() => createAsciiEffect(), 100)
   } else {
     if (effect) {
-      effect.setSize(sizes.width, sizes.height)
+      try {
+        effect.setSize(sizes.width, sizes.height)
+      } catch (error) {
+        console.error('Error resizing ASCII effect:', error)
+      }
     }
   }
 
@@ -260,25 +409,45 @@ function resize() {
 let resizeTimeout
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimeout)
-  resizeTimeout = setTimeout(resize, 100)
+  resizeTimeout = setTimeout(resize, 150) // Slightly longer delay for mobile
 })
 
-// Also handle orientation change
+// Handle orientation change with iOS-specific delay
 window.addEventListener('orientationchange', () => {
-  setTimeout(resize, 100)
+  setTimeout(() => {
+    console.log('Orientation change detected')
+    resize()
+  }, 200) // Longer delay for iOS
 })
 
-resize()
+// Initial resize
+setTimeout(() => resize(), 200)
 
-// Animate
+// Animate with performance monitoring
 const clock = new THREE.Clock()
+let frameCount = 0
+let lastPerformanceLog = Date.now()
+
 function animate() {
   requestAnimationFrame(animate)
+
+  frameCount++
+
+  // Log performance every 5 seconds on mobile
+  if (isMobile() && Date.now() - lastPerformanceLog > 5000) {
+    const fps = frameCount / 5
+    console.log('Average FPS:', fps.toFixed(1))
+    frameCount = 0
+    lastPerformanceLog = Date.now()
+  }
+
   const delta = clock.getDelta()
 
-  // Update mixer (for GLB animations)
+  // Update mixer (for GLB animations) with reduced frequency on mobile
   if (mixer) {
-    mixer.update(delta)
+    if (!isMobile() || frameCount % 2 === 0) { // Reduce animation updates on mobile
+      mixer.update(delta)
+    }
   }
 
   if (model && modelLoaded) {
@@ -298,6 +467,11 @@ function animate() {
       effect.render(scene, camera)
     } catch (error) {
       console.error('Render error:', error)
+      // Try to recreate the effect if rendering fails
+      if (frameCount % 60 === 0) { // Only retry once per second
+        console.log('Attempting to recreate ASCII effect after render error')
+        createAsciiEffect()
+      }
     }
   }
 }
@@ -311,4 +485,32 @@ if (isMobile()) {
   console.log('Window dimensions:', window.innerWidth, 'x', window.innerHeight)
   console.log('Container dimensions:', asciiContainer.offsetWidth, 'x', asciiContainer.offsetHeight)
   console.log('Device pixel ratio:', window.devicePixelRatio)
+
+  if (isIOS()) {
+    console.log('iOS specific info:')
+    console.log('Safari version:', navigator.userAgent.match(/Version\/([0-9\._]+)/)?.[1] || 'unknown')
+    console.log('Standalone mode:', window.navigator.standalone)
+  }
 }
+
+// Add error handler for unhandled WebGL errors
+window.addEventListener('error', (event) => {
+  if (event.message.includes('WebGL') || event.message.includes('CONTEXT_LOST')) {
+    console.error('WebGL context error detected:', event.message)
+    // You might want to show a user-friendly error message here
+  }
+})
+
+// Handle WebGL context lost/restored
+canvas.addEventListener('webglcontextlost', (event) => {
+  event.preventDefault()
+  console.warn('WebGL context lost')
+}, false)
+
+canvas.addEventListener('webglcontextrestored', () => {
+  console.log('WebGL context restored - reinitializing')
+  // Reinitialize everything
+  setTimeout(() => {
+    createAsciiEffect()
+  }, 100)
+}, false)
