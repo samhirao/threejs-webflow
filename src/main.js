@@ -1,29 +1,42 @@
 import * as THREE from 'three'
 import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-
 import animateTitle from './features/animateTitle'
 import createBadge from './features/createBasge'
 import './styles/style.css'
+
 // Features
 createBadge()
 animateTitle()
+
 // Canvas
 const canvas = document.createElement('canvas')
 canvas.classList.add('webgl')
+
 // Attach to ASCII container div
 const asciiContainer = document.querySelector('.ascii-bg')
 if (!asciiContainer) {
   console.error('ASCII container .ascii-bg not found')
 }
 asciiContainer.appendChild(canvas)
+
 // Scene
 const scene = new THREE.Scene()
+
 // Sizes
 const sizes = {
   width: asciiContainer.offsetWidth,
   height: asciiContainer.offsetHeight,
 }
+
+// Mobile breakpoint
+const MOBILE_BREAKPOINT = 768
+
+// Check if mobile
+function isMobile() {
+  return window.innerWidth <= MOBILE_BREAKPOINT
+}
+
 // Camera
 const camera = new THREE.PerspectiveCamera(
   25,
@@ -33,6 +46,7 @@ const camera = new THREE.PerspectiveCamera(
 )
 camera.position.z = 4
 scene.add(camera)
+
 // Lights
 const mainlight = new THREE.DirectionalLight('white', 1)
 mainlight.position.set(1, 2, 0.5)
@@ -41,16 +55,19 @@ backlight.position.set(0, 5, 2)
 const secondlight = new THREE.DirectionalLight('white', 1)
 secondlight.position.set(1, 0, 1)
 scene.add(mainlight, backlight, secondlight)
+
 // Model + Animation
 const gltfLoader = new GLTFLoader()
 let model = null
 let mixer = null
 const referenceSize = 1440 // design reference width for scaling
+
 gltfLoader.load(
   'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9b3f0ed751939a196b255_shield-orbit.glb.txt',
   (gltf) => {
     model = gltf.scene
     scene.add(model)
+
     // If there are animations in the glb
     if (gltf.animations && gltf.animations.length > 0) {
       mixer = new THREE.AnimationMixer(model)
@@ -60,10 +77,12 @@ gltfLoader.load(
         console.log('Playing animation:', clip.name)
       })
     }
+
     // Initial scale
     updateModelScale()
   }
 )
+
 // Renderer
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
@@ -72,51 +91,114 @@ const renderer = new THREE.WebGLRenderer({
 })
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-// ASCII Effect
-const effect = new AsciiEffect(renderer, ` .:=*R$#@`, { invert: false })
-effect.setSize(sizes.width, sizes.height)
-asciiContainer.appendChild(effect.domElement)
+
+// ASCII Effect with responsive font size
+let effect = null
+
+function createAsciiEffect() {
+  // Remove existing effect if it exists
+  if (effect && effect.domElement) {
+    asciiContainer.removeChild(effect.domElement)
+  }
+
+  // Adjust font size based on screen size
+  const fontSize = isMobile() ? '8px' : '12px'
+  const characters = ` .:=*R$#@`
+
+  effect = new AsciiEffect(renderer, characters, {
+    invert: false,
+    fontSize: fontSize,
+    fontWeight: 'normal'
+  })
+
+  effect.setSize(sizes.width, sizes.height)
+  asciiContainer.appendChild(effect.domElement)
+
+  // Apply font size via CSS as fallback
+  effect.domElement.style.fontSize = fontSize
+  effect.domElement.style.lineHeight = fontSize
+}
+
+// Initialize ASCII effect
+createAsciiEffect()
+
 // Hide original canvas
 canvas.style.display = 'none'
+
 // Cursor & Scroll
 const cursor = { x: 0, y: 0 }
 window.addEventListener('mousemove', (event) => {
   cursor.x = (event.clientX / sizes.width - 0.5) * 2
   cursor.y = (event.clientY / sizes.height - 0.5) * 2
 })
+
 let scrollY = 0
 window.addEventListener('scroll', () => {
   scrollY = window.scrollY * 0.003
 })
-// ===== Resize based on ASCII container div =====
+
+// ===== Responsive model scaling =====
 function updateModelScale() {
   if (!model) return
-  const scale = asciiContainer.offsetWidth / referenceSize
-  model.scale.set(scale, scale, scale)
+
+  const baseScale = asciiContainer.offsetWidth / referenceSize
+
+  if (isMobile()) {
+    // On mobile, make the model bigger (1.8x) to compensate for smaller screen
+    const mobileScale = baseScale * 1.8
+    model.scale.set(mobileScale, mobileScale, mobileScale)
+  } else {
+    // Desktop: normal scaling
+    model.scale.set(baseScale, baseScale, baseScale)
+  }
 }
+
 function resize() {
+  const wasMobile = sizes.width <= MOBILE_BREAKPOINT
+  const isNowMobile = window.innerWidth <= MOBILE_BREAKPOINT
+
   sizes.width = asciiContainer.offsetWidth
   sizes.height = asciiContainer.offsetHeight
+
   camera.aspect = sizes.width / sizes.height
   camera.updateProjectionMatrix()
+
   renderer.setSize(sizes.width, sizes.height)
-  effect.setSize(sizes.width, sizes.height)
+
+  // Recreate ASCII effect if we switched between mobile/desktop
+  if (wasMobile !== isNowMobile) {
+    createAsciiEffect()
+  } else {
+    effect.setSize(sizes.width, sizes.height)
+  }
+
   updateModelScale()
 }
-window.addEventListener('resize', resize)
+
+// Debounce resize to prevent too many calls
+let resizeTimeout
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout)
+  resizeTimeout = setTimeout(resize, 100)
+})
+
 resize()
+
 // Animate
 const clock = new THREE.Clock()
 function animate() {
   requestAnimationFrame(animate)
   const delta = clock.getDelta()
+
   // Update mixer (for GLB animations)
   if (mixer) {
     mixer.update(delta)
   }
+
   if (model) {
     const cursorXOffset = cursor.x * 0.3
     const cursorYOffset = cursor.y * 0.1
+
     // Keep only cursor + scroll control (no idle rotation)
     model.rotation.y = cursorXOffset
     model.rotation.x = cursorYOffset
@@ -124,6 +206,8 @@ function animate() {
     model.position.x = -0.1 // move it to the left
     model.position.z += (scrollY - model.position.z) * 0.5
   }
+
   effect.render(scene, camera)
 }
+
 animate()
