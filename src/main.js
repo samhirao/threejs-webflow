@@ -1,15 +1,15 @@
 import * as THREE from 'three'
 import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import animateTitle from './features/animateTitle'
+
 import './styles/style.css'
 
-// canvas
+// Canvas
 const canvas = document.createElement('canvas')
 canvas.classList.add('webgl')
 
-// attach to ascii container div
-const asciiContainer = document.querySelector('.ascii-bg')
+// Attach to ASCII container div
+let asciiContainer = document.querySelector('.ascii-bg')
 if (!asciiContainer) {
   console.error('ASCII container .ascii-bg not found')
   const fallback = document.createElement('div')
@@ -22,16 +22,16 @@ if (!asciiContainer) {
 
 asciiContainer.appendChild(canvas)
 
-// scene
+// Scene
 const scene = new THREE.Scene()
 
-// sizes
+// Sizes
 const sizes = {
   width: asciiContainer.offsetWidth || window.innerWidth,
   height: asciiContainer.offsetHeight || 400,
 }
 
-// camera
+// Camera
 const camera = new THREE.PerspectiveCamera(
   25,
   sizes.width / sizes.height,
@@ -41,7 +41,7 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.z = 4
 scene.add(camera)
 
-// lights
+// Lights
 const mainlight = new THREE.DirectionalLight('white', 1)
 mainlight.position.set(1, 2, 0.5)
 const backlight = new THREE.DirectionalLight('white', 1)
@@ -50,7 +50,7 @@ const secondlight = new THREE.DirectionalLight('white', 1)
 secondlight.position.set(1, 0, 1)
 scene.add(mainlight, backlight, secondlight)
 
-// model + animation
+// Model + Animation
 const gltfLoader = new GLTFLoader()
 let model = null
 let mixer = null
@@ -63,10 +63,10 @@ gltfLoader.load(
     modelLoaded = true
     scene.add(model)
 
-    // remove placeholder when model loads
+    // Remove placeholder when model loads
     scene.remove(placeholderMesh)
 
-    // handle animations
+    // Handle animations
     if (gltf.animations && gltf.animations.length > 0) {
       mixer = new THREE.AnimationMixer(model)
       gltf.animations.forEach((clip) => {
@@ -75,17 +75,17 @@ gltfLoader.load(
       })
     }
 
-    // scale model based on container size
+    // Scale model based on container size
     const scale = Math.max(asciiContainer.offsetWidth, 300) / 1440
     model.scale.set(scale, scale, scale)
   },
   undefined,
   (error) => {
     console.error('GLB loading error:', error)
-  }
+  },
 )
 
-// renderer
+// Renderer
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
   antialias: true,
@@ -94,16 +94,16 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
-// ascii effect
+// ASCII Effect
 const characters = ` .:=*R$#@`
 const effect = new AsciiEffect(renderer, characters, { invert: false })
 effect.setSize(sizes.width, sizes.height)
 asciiContainer.appendChild(effect.domElement)
 
-// hide original canvas
+// Hide original canvas
 canvas.style.display = 'none'
 
-// placeholder geometry while loading
+// Placeholder geometry while loading
 const placeholderGeometry = new THREE.SphereGeometry(0.5, 16, 16)
 const placeholderMaterial = new THREE.MeshBasicMaterial({
   color: 0x333333,
@@ -114,20 +114,20 @@ const placeholderMaterial = new THREE.MeshBasicMaterial({
 const placeholderMesh = new THREE.Mesh(placeholderGeometry, placeholderMaterial)
 scene.add(placeholderMesh)
 
-// mouse interaction
+// Mouse interaction
 const cursor = { x: 0, y: 0 }
 window.addEventListener('mousemove', (event) => {
   cursor.x = (event.clientX / sizes.width - 0.5) * 2
   cursor.y = (event.clientY / sizes.height - 0.5) * 2
 })
 
-// scroll interaction
+// Scroll interaction
 let scrollY = 0
 window.addEventListener('scroll', () => {
-  scrollY = window.scrollY * 0.001
+  scrollY = window.scrollY
 })
 
-// resize handling
+// Resize handling
 function resize() {
   sizes.width = asciiContainer.offsetWidth || window.innerWidth
   sizes.height = asciiContainer.offsetHeight || 400
@@ -138,7 +138,7 @@ function resize() {
   renderer.setSize(sizes.width, sizes.height)
   effect.setSize(sizes.width, sizes.height)
 
-  // update model scale
+  // Update model scale
   if (model) {
     const scale = Math.max(asciiContainer.offsetWidth, 300) / 1440
     model.scale.set(scale, scale, scale)
@@ -147,31 +147,34 @@ function resize() {
 
 window.addEventListener('resize', resize)
 
-// animation loop
+// Animation loop
 const clock = new THREE.Clock()
 function animate() {
   requestAnimationFrame(animate)
   const delta = clock.getDelta()
 
-  // update animations
+  // Update animations
   if (mixer) {
     mixer.update(delta)
   }
 
-  // animate placeholder while loading
+  // Animate placeholder while loading
   if (!modelLoaded && placeholderMesh) {
     placeholderMesh.rotation.y += 0.01
     placeholderMesh.rotation.x += 0.005
   }
 
-  // animate model
+  // Animate model
   if (model && modelLoaded) {
     model.rotation.y = cursor.x * 0.3
     model.rotation.x = cursor.y * 0.1
     model.position.y = -0.1
     model.position.x = -0.1
-    model.position.z += (scrollY - model.position.z) * 0.5
   }
+
+  // Camera zoom on scroll (desktop only)
+  const targetZ = 4 - (scrollY * 0.002) // Zoom in as we scroll down
+  camera.position.z += (targetZ - camera.position.z) * 0.1 // Smooth animation
 
   effect.render(scene, camera)
 }
