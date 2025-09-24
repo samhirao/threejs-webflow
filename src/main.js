@@ -3,8 +3,10 @@ import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 import animateTitle from './features/animateTitle'
+import createBadge from './features/createBasge'
 import './styles/style.css'
 // Features
+createBadge()
 animateTitle()
 // Canvas
 const canvas = document.createElement('canvas')
