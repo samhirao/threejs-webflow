@@ -2,35 +2,26 @@ import * as THREE from 'three'
 import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
+import animateTitle from './features/animateTitle'
 import './styles/style.css'
-
+// Features
+animateTitle()
 // Canvas
 const canvas = document.createElement('canvas')
 canvas.classList.add('webgl')
-
 // Attach to ASCII container div
-let asciiContainer = document.querySelector('.ascii-bg')
+const asciiContainer = document.querySelector('.ascii-bg')
 if (!asciiContainer) {
   console.error('ASCII container .ascii-bg not found')
-  const fallback = document.createElement('div')
-  fallback.className = 'ascii-bg'
-  fallback.style.width = '100%'
-  fallback.style.height = '400px'
-  document.body.appendChild(fallback)
-  asciiContainer = fallback
 }
-
 asciiContainer.appendChild(canvas)
-
 // Scene
 const scene = new THREE.Scene()
-
 // Sizes
 const sizes = {
-  width: asciiContainer.offsetWidth || window.innerWidth,
-  height: asciiContainer.offsetHeight || 400,
+  width: asciiContainer.offsetWidth,
+  height: asciiContainer.offsetHeight,
 }
-
 // Camera
 const camera = new THREE.PerspectiveCamera(
   25,
@@ -40,7 +31,6 @@ const camera = new THREE.PerspectiveCamera(
 )
 camera.position.z = 4
 scene.add(camera)
-
 // Lights
 const mainlight = new THREE.DirectionalLight('white', 1)
 mainlight.position.set(1, 2, 0.5)
@@ -49,42 +39,29 @@ backlight.position.set(0, 5, 2)
 const secondlight = new THREE.DirectionalLight('white', 1)
 secondlight.position.set(1, 0, 1)
 scene.add(mainlight, backlight, secondlight)
-
 // Model + Animation
 const gltfLoader = new GLTFLoader()
 let model = null
 let mixer = null
-let modelLoaded = false
-
+const referenceSize = 1440 // design reference width for scaling
 gltfLoader.load(
   'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9b3f0ed751939a196b255_shield-orbit.glb.txt',
   (gltf) => {
     model = gltf.scene
-    modelLoaded = true
     scene.add(model)
-
-    // Remove placeholder when model loads
-    scene.remove(placeholderMesh)
-
-    // Handle animations
+    // If there are animations in the glb
     if (gltf.animations && gltf.animations.length > 0) {
       mixer = new THREE.AnimationMixer(model)
       gltf.animations.forEach((clip) => {
         const action = mixer.clipAction(clip)
         action.play()
+        console.log('Playing animation:', clip.name)
       })
     }
-
-    // Scale model based on container size
-    const scale = Math.max(asciiContainer.offsetWidth, 300) / 1440
-    model.scale.set(scale, scale, scale)
-  },
-  undefined,
-  (error) => {
-    console.error('GLB loading error:', error)
+    // Initial scale
+    updateModelScale()
   }
 )
-
 // Renderer
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
@@ -93,90 +70,58 @@ const renderer = new THREE.WebGLRenderer({
 })
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-
 // ASCII Effect
-const characters = ` .:=*R$#@`
-const effect = new AsciiEffect(renderer, characters, { invert: false })
+const effect = new AsciiEffect(renderer, ` .:=*R$#@`, { invert: false })
 effect.setSize(sizes.width, sizes.height)
 asciiContainer.appendChild(effect.domElement)
-
 // Hide original canvas
 canvas.style.display = 'none'
-
-// Placeholder geometry while loading
-const placeholderGeometry = new THREE.SphereGeometry(0.5, 16, 16)
-const placeholderMaterial = new THREE.MeshBasicMaterial({
-  color: 0x333333,
-  wireframe: true,
-  transparent: true,
-  opacity: 0.3,
-})
-const placeholderMesh = new THREE.Mesh(placeholderGeometry, placeholderMaterial)
-scene.add(placeholderMesh)
-
-// Mouse interaction
+// Cursor & Scroll
 const cursor = { x: 0, y: 0 }
 window.addEventListener('mousemove', (event) => {
   cursor.x = (event.clientX / sizes.width - 0.5) * 2
   cursor.y = (event.clientY / sizes.height - 0.5) * 2
 })
-
-// Scroll interaction
 let scrollY = 0
 window.addEventListener('scroll', () => {
-  scrollY = window.scrollY
+  scrollY = window.scrollY * 0.003
 })
-
-// Resize handling
+// ===== Resize based on ASCII container div =====
+function updateModelScale() {
+  if (!model) return
+  const scale = asciiContainer.offsetWidth / referenceSize
+  model.scale.set(scale, scale, scale)
+}
 function resize() {
-  sizes.width = asciiContainer.offsetWidth || window.innerWidth
-  sizes.height = asciiContainer.offsetHeight || 400
-
+  sizes.width = asciiContainer.offsetWidth
+  sizes.height = asciiContainer.offsetHeight
   camera.aspect = sizes.width / sizes.height
   camera.updateProjectionMatrix()
-
   renderer.setSize(sizes.width, sizes.height)
   effect.setSize(sizes.width, sizes.height)
-
-  // Update model scale
-  if (model) {
-    const scale = Math.max(asciiContainer.offsetWidth, 300) / 1440
-    model.scale.set(scale, scale, scale)
-  }
+  updateModelScale()
 }
-
 window.addEventListener('resize', resize)
-
-// Animation loop
+resize()
+// Animate
 const clock = new THREE.Clock()
 function animate() {
   requestAnimationFrame(animate)
   const delta = clock.getDelta()
-
-  // Update animations
+  // Update mixer (for GLB animations)
   if (mixer) {
     mixer.update(delta)
   }
-
-  // Animate placeholder while loading
-  if (!modelLoaded && placeholderMesh) {
-    placeholderMesh.rotation.y += 0.01
-    placeholderMesh.rotation.x += 0.005
+  if (model) {
+    const cursorXOffset = cursor.x * 0.3
+    const cursorYOffset = cursor.y * 0.1
+    // Keep only cursor + scroll control (no idle rotation)
+    model.rotation.y = cursorXOffset
+    model.rotation.x = cursorYOffset
+    model.position.y = -0.1 // move it slightly down
+    model.position.x = -0.1 // move it to the left
+    model.position.z += (scrollY - model.position.z) * 0.5
   }
-
-  // Animate model
-  if (model && modelLoaded) {
-    model.rotation.y = cursor.x * 0.3
-    model.rotation.x = cursor.y * 0.1
-    model.position.y = -0.1
-    model.position.x = -0.1
-  }
-
-  // Camera zoom on scroll (desktop only)
-  const targetZ = 4 - scrollY * 0.002 // Zoom in as we scroll down
-  camera.position.z += (targetZ - camera.position.z) * 0.1 // Smooth animation
-
   effect.render(scene, camera)
 }
-
 animate()
