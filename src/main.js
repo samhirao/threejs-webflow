@@ -82,7 +82,7 @@ gltfLoader.load(
   undefined,
   (error) => {
     console.error('GLB loading error:', error)
-  },
+  }
 )
 
 // Renderer
@@ -109,7 +109,7 @@ const placeholderMaterial = new THREE.MeshBasicMaterial({
   color: 0x333333,
   wireframe: true,
   transparent: true,
-  opacity: 0.3
+  opacity: 0.3,
 })
 const placeholderMesh = new THREE.Mesh(placeholderGeometry, placeholderMaterial)
 scene.add(placeholderMesh)
@@ -173,7 +173,7 @@ function animate() {
   }
 
   // Camera zoom on scroll (desktop only)
-  const targetZ = 4 - (scrollY * 0.002) // Zoom in as we scroll down
+  const targetZ = 4 - scrollY * 0.002 // Zoom in as we scroll down
   camera.position.z += (targetZ - camera.position.z) * 0.1 // Smooth animation
 
   effect.render(scene, camera)
