@@ -150,7 +150,7 @@ function animate() {
     // apply rotations and position
     model.rotation.y = cursorXOffset
     model.rotation.x = cursorYOffset
-    model.position.y = 0 // move it slightly down
+    model.position.y = 0.2 // move it slightly UP
     model.position.x = -0.1 // move it to the left
     model.position.z = scrollY
   }
