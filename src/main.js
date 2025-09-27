@@ -56,7 +56,7 @@ let mixer = null
 const referenceSize = 1440 // design reference width for scaling
 
 gltfLoader.load(
-  'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68d73665544f90351da37654_republiclogo-anim.gltf.txt', // previous: https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9b3f0ed751939a196b255_shield-orbit.glb.txt
+  'https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68d73766f3a782e0df555115_republiclogo-anim.glb.txt', // previous: https://cdn.prod.website-files.com/68c6ab111eb5a797aedfa7bd/68c9b3f0ed751939a196b255_shield-orbit.glb.txt
   (gltf) => {
     model = gltf.scene
     scene.add(model)
